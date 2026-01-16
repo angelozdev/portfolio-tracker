@@ -3,11 +3,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { supabase } from "@/shared/infra/supabase-client";
 import { fetchCurrentPrices } from "@/features/market-data/services/price-service";
 import { calculatePortfolio } from "../logic/portfolio-calculator";
+import { calculateBrokerSummary } from "../logic/broker-calculator";
 import SummaryCards from "./summary-cards";
 import AllocationChart from "./allocation-chart";
 import RebalanceTable from "./rebalance-table";
+import BrokerBalanceCard from "./broker-balance-card";
 import Card from "@/shared/ui/card";
-import type { Asset, Holding } from "@/types";
+import type { Asset, Holding, Broker } from "@/types";
 import { useState } from "react";
 import Button from "@/shared/ui/button";
 
@@ -15,28 +17,40 @@ export default function Dashboard() {
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
 
   // 1. Fetch Data
-  const { data: portfolio, refetch } = useSuspenseQuery({
+  const { data, refetch } = useSuspenseQuery({
     queryKey: QUERY_KEYS.PORTFOLIO,
     queryFn: async () => {
-      // Fetch Assets and Holdings
+      // Fetch Assets, Holdings, and Brokers
       const { data: assets } = await supabase.from("assets").select("*");
       const { data: holdings } = await supabase.from("holdings").select("*");
+      const { data: brokers } = await supabase.from("brokers").select("*");
 
-      if (!assets || !holdings)
+      if (!assets || !holdings || !brokers)
         throw new Error("Failed to fetch portfolio data");
 
       // Fetch Prices
       const symbols = assets.map((a: Asset) => a.symbol);
       const prices = await fetchCurrentPrices(symbols);
 
-      // Calculate
-      return calculatePortfolio(
+      // Calculate Portfolio and Broker Summaries
+      const portfolio = calculatePortfolio(
         assets as Asset[],
         holdings as Holding[],
         prices
       );
+
+      const brokerSummary = calculateBrokerSummary(
+        holdings as Holding[],
+        brokers as Broker[],
+        prices,
+        assets as Asset[]
+      );
+
+      return { portfolio, brokerSummary };
     },
   });
+
+  const { portfolio, brokerSummary } = data;
 
   const handleSeedData = async () => {
     setIsGeneratingSeed(true);
@@ -73,6 +87,8 @@ export default function Dashboard() {
       </div>
 
       <SummaryCards summary={portfolio} />
+
+      <BrokerBalanceCard summary={brokerSummary} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

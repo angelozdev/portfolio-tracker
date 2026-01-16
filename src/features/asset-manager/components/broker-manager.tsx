@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 import Card from "@/shared/ui/card";
-import { Trash2 } from "lucide-react";
+import { Trash2, Building2 } from "lucide-react";
 import type { Broker } from "@/types";
 
 interface BrokerManagerProps {
@@ -21,14 +21,19 @@ interface BrokerManagerProps {
 export default function BrokerManager({ brokers }: BrokerManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [newBrokerName, setNewBrokerName] = useState("");
+  const [newBrokerIcon, setNewBrokerIcon] = useState("");
   const { createBroker, deleteBroker } = useBrokers();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBrokerName.trim()) return;
-    
-    await createBroker.mutateAsync(newBrokerName);
+
+    await createBroker.mutateAsync({
+      name: newBrokerName,
+      icon: newBrokerIcon.trim() || undefined,
+    });
     setNewBrokerName("");
+    setNewBrokerIcon("");
     setIsOpen(false);
   };
 
@@ -54,6 +59,19 @@ export default function BrokerManager({ brokers }: BrokerManagerProps) {
                   onChange={(e) => setNewBrokerName(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="icon">Icon (optional)</Label>
+                <Input
+                  id="icon"
+                  placeholder="e.g. 🏦 💰 📊"
+                  value={newBrokerIcon}
+                  onChange={(e) => setNewBrokerIcon(e.target.value)}
+                  maxLength={2}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter an emoji to represent this broker
+                </p>
+              </div>
               <Button type="submit" disabled={createBroker.isPending}>
                 {createBroker.isPending ? "Adding..." : "Add Broker"}
               </Button>
@@ -66,7 +84,14 @@ export default function BrokerManager({ brokers }: BrokerManagerProps) {
         {brokers.map((broker) => (
           <Card key={broker.id}>
             <Card.Content className="flex justify-between items-center p-6">
-              <span className="font-medium">{broker.name}</span>
+              <div className="flex items-center gap-2">
+                {broker.icon ? (
+                  <span className="text-xl">{broker.icon}</span>
+                ) : (
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">{broker.name}</span>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"

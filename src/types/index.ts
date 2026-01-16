@@ -49,3 +49,18 @@ export interface PortfolioSummary {
   totalValue: number;
   assets: AssetPerformance[];
 }
+
+export interface BrokerPerformance {
+  brokerId: string;
+  brokerName: string;
+  brokerIcon?: string;
+  totalValue: number;
+  percentage: number; // % del portfolio total
+  holdingsCount: number; // cantidad de holdings en este broker
+  assetsCount: number; // cantidad de assets únicos en este broker
+}
+
+export interface BrokerSummary {
+  brokers: BrokerPerformance[];
+  totalValue: number;
+}

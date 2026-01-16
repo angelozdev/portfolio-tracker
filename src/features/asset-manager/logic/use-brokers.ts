@@ -6,13 +6,13 @@ export function useBrokers() {
   const queryClient = useQueryClient();
 
   const createBroker = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (params: { name: string; icon?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not found");
 
       const { data, error } = await supabase
         .from("brokers")
-        .insert({ name, user_id: user.id })
+        .insert({ name: params.name, icon: params.icon, user_id: user.id })
         .select()
         .single();
 
