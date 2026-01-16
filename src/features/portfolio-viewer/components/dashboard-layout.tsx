@@ -1,0 +1,131 @@
+import { QUERY_KEYS } from "@/shared/constants/query-keys";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { supabase } from "@/shared/infra/supabase-client";
+import { fetchCurrentPrices } from "@/features/market-data/services/price-service";
+import { calculatePortfolio } from "../logic/portfolio-calculator";
+import SummaryCards from "./summary-cards";
+import AllocationChart from "./allocation-chart";
+import RebalanceTable from "./rebalance-table";
+import Card from "@/shared/ui/card";
+import type { Asset, Holding } from "@/types";
+import { useState } from "react";
+import Button from "@/shared/ui/button";
+
+export default function Dashboard() {
+  const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+
+  // 1. Fetch Data
+  const { data: portfolio, refetch } = useSuspenseQuery({
+    queryKey: QUERY_KEYS.PORTFOLIO,
+    queryFn: async () => {
+      // Fetch Assets and Holdings
+      const { data: assets } = await supabase.from("assets").select("*");
+      const { data: holdings } = await supabase.from("holdings").select("*");
+
+      if (!assets || !holdings)
+        throw new Error("Failed to fetch portfolio data");
+
+      // Fetch Prices
+      const symbols = assets.map((a: Asset) => a.symbol);
+      const prices = await fetchCurrentPrices(symbols);
+
+      // Calculate
+      return calculatePortfolio(
+        assets as Asset[],
+        holdings as Holding[],
+        prices
+      );
+    },
+  });
+
+  const handleSeedData = async () => {
+    setIsGeneratingSeed(true);
+    try {
+      const { error } = await supabase.rpc("generate_seed_data");
+      if (error) console.error(error);
+      else refetch();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsGeneratingSeed(false);
+    }
+  };
+
+  if (!portfolio || portfolio.assets.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <h1 className="text-2xl font-bold">Welcome to Portfolio Tracker</h1>
+        <p className="text-muted-foreground">You don't have any assets yet.</p>
+        <Button onClick={handleSeedData} disabled={isGeneratingSeed}>
+          {isGeneratingSeed ? "Generating..." : "Generate Demo Data"}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 p-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <div className="text-sm text-muted-foreground">
+          Last updated: {new Date().toLocaleTimeString()}
+        </div>
+      </div>
+
+      <SummaryCards summary={portfolio} />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <Card.Header>
+            <Card.Title>Allocation</Card.Title>
+            <Card.Description>Current distribution by asset</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <AllocationChart assets={portfolio.assets} />
+          </Card.Content>
+        </Card>
+
+        <div className="hidden md:block">
+          {/* Placeholder for future "History" or "Sector" chart */}
+          <Card className="h-full">
+            <Card.Header>
+              <Card.Title>Rebalance Strategy</Card.Title>
+              <Card.Description>
+                Action plan to hit your targets
+              </Card.Description>
+            </Card.Header>
+            <Card.Content>
+              <div className="text-sm text-muted-foreground space-y-2">
+                {portfolio.assets.map((asset) => (
+                  <p key={asset.assetId}>
+                    • <strong>{asset.symbol}</strong> target is{" "}
+                    {asset.targetAllocation}%.
+                  </p>
+                ))}
+                {portfolio.assets.length === 0 && (
+                  <p>No assets configured yet.</p>
+                )}
+                <br />
+                <p className="italic">
+                  "Time in the market beats timing the market."
+                </p>
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
+      </div>
+
+      <Card>
+        <Card.Header>
+          <Card.Title>Rebalance Actions</Card.Title>
+          <Card.Description>
+            Buy/Sell recommendations to align with your target allocation.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <RebalanceTable assets={portfolio.assets} />
+        </Card.Content>
+      </Card>
+    </div>
+  );
+}
