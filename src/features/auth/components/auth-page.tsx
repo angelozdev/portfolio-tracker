@@ -3,6 +3,8 @@ import { supabase } from "@/shared/infra/supabase-client";
 import Button from "@/shared/ui/button";
 import Card from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
+import { Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AuthPage() {
   const [authView, setAuthView] = useState<"signin" | "signup">("signin");
@@ -23,7 +25,7 @@ export default function AuthPage() {
           password,
         });
         if (error) throw error;
-        alert("Check your email for the confirmation link!");
+        toast.success("Check your email for the confirmation link!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -74,14 +76,24 @@ export default function AuthPage() {
               />
             </div>
 
-            {error && <div className="text-sm text-red-500">{error}</div>}
+            {error && (
+              <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? "Loading..."
-                : authView === "signin"
-                ? "Sign In"
-                : "Sign Up"}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
+                </>
+              ) : authView === "signin" ? (
+                "Sign In"
+              ) : (
+                "Sign Up"
+              )}
             </Button>
 
             <div className="text-center text-sm">
@@ -90,7 +102,7 @@ export default function AuthPage() {
                 onClick={() =>
                   setAuthView(authView === "signin" ? "signup" : "signin")
                 }
-                className="underline text-muted-foreground hover:text-primary"
+                className="underline text-muted-foreground hover:text-primary transition-colors"
               >
                 {authView === "signin"
                   ? "Don't have an account? Sign up"

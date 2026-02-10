@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useHoldings } from "../logic/use-holdings";
 import Button from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -25,8 +25,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2, Wallet, Plus } from "lucide-react";
 import type { Asset, Broker, Holding } from "@/types";
+import ConfirmDialog from "@/shared/ui/confirm-dialog";
+import { toast } from "sonner";
+
+const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+
+function formatRelativeDate(dateStr: string) {
+  const now = Date.now();
+  const diffSec = (new Date(dateStr).getTime() - now) / 1000;
+  const absSec = Math.abs(diffSec);
+
+  if (absSec < 60) return rtf.format(Math.round(diffSec), "second");
+  if (absSec < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+  if (absSec < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
+  if (absSec < 2592000) return rtf.format(Math.round(diffSec / 86400), "day");
+  return rtf.format(Math.round(diffSec / 2592000), "month");
+}
 
 interface HoldingManagerProps {
   holdings: Holding[];
@@ -41,6 +57,7 @@ export default function HoldingManager({
 }: HoldingManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [newHolding, setNewHolding] = useState<Partial<Holding>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Holding | null>(null);
 
   const { createHolding, updateHolding, deleteHolding } = useHoldings();
 
@@ -48,40 +65,56 @@ export default function HoldingManager({
     e.preventDefault();
     if (!newHolding.asset_id || !newHolding.broker_id) return;
 
-    await createHolding.mutateAsync({
-      asset_id: newHolding.asset_id,
-      broker_id: newHolding.broker_id,
-      shares: Number(newHolding.shares || 0),
-    });
-
-    setNewHolding({});
-    setIsOpen(false);
+    try {
+      await createHolding.mutateAsync({
+        asset_id: newHolding.asset_id,
+        broker_id: newHolding.broker_id,
+        shares: Number(newHolding.shares || 0),
+      });
+      const symbol = assetMap.get(newHolding.asset_id) ?? newHolding.asset_id;
+      toast.success(`Holding for "${symbol}" created`);
+      setNewHolding({});
+      setIsOpen(false);
+    } catch {
+      toast.error("Failed to create holding");
+    }
   };
 
-  const getAssetName = (id: string) =>
-    assets.find((a) => a.id === id)?.symbol || id;
+  const handleSharesUpdate = async (holding: Holding, newValue: number) => {
+    if (newValue === Number(holding.shares)) return;
+    try {
+      await updateHolding.mutateAsync({ id: holding.id, shares: newValue });
+      toast.success(`Shares updated to ${newValue}`);
+    } catch {
+      toast.error("Failed to update shares");
+    }
+  };
 
-  const getBrokerName = (id: string) =>
-    brokers.find((b) => b.id === id)?.name || id;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteHolding.mutateAsync(deleteTarget.id);
+      toast.success("Holding deleted");
+    } catch {
+      toast.error("Failed to delete holding");
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const assetMap = useMemo(
+    () => new Map(assets.map((a) => [a.id, a.symbol])),
+    [assets],
+  );
+  const brokerMap = useMemo(
+    () => new Map(brokers.map((b) => [b.id, b.name])),
+    [brokers],
+  );
 
   const sortedHoldings = [...holdings].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
-
-  const now = new Date();
-  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
-
-  const formatRelativeDate = (dateStr: string) => {
-    const diffSec = (new Date(dateStr).getTime() - now.getTime()) / 1000;
-    const absSec = Math.abs(diffSec);
-
-    if (absSec < 60) return rtf.format(Math.round(diffSec / 1), "second");
-    if (absSec < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
-    if (absSec < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
-    if (absSec < 2592000) return rtf.format(Math.round(diffSec / 86400), "day");
-    return rtf.format(Math.round(diffSec / 2592000), "month");
-  };
 
   return (
     <div className="space-y-4">
@@ -154,65 +187,97 @@ export default function HoldingManager({
               </div>
 
               <Button type="submit" disabled={createHolding.isPending}>
-                {createHolding.isPending ? "Adding..." : "Add Holding"}
+                {createHolding.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Holding"
+                )}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Asset</TableHead>
-              <TableHead>Broker</TableHead>
-              <TableHead>Shares</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedHoldings.map((holding) => (
-              <TableRow key={holding.id}>
-                <TableCell className="font-medium">
-                  {getAssetName(holding.asset_id)}
-                </TableCell>
-                <TableCell>{getBrokerName(holding.broker_id)}</TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    className="w-24 h-8"
-                    defaultValue={holding.shares}
-                    onBlur={(e) => {
-                      const val = Number(e.target.value);
-                      if (val !== Number(holding.shares)) {
-                        updateHolding.mutate({ id: holding.id, shares: val });
-                      }
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {formatRelativeDate(holding.created_at)}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => {
-                      if (confirm("Delete this holding?"))
-                        deleteHolding.mutate(holding.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+      {sortedHoldings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Wallet className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="text-sm font-medium">No holdings yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Add a holding to track your shares across brokers.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-4"
+            onClick={() => setIsOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Holding
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Asset</TableHead>
+                <TableHead>Broker</TableHead>
+                <TableHead>Shares</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {sortedHoldings.map((holding) => (
+                <TableRow key={holding.id}>
+                  <TableCell className="font-medium">
+                    {assetMap.get(holding.asset_id) ?? holding.asset_id}
+                  </TableCell>
+                  <TableCell>
+                    {brokerMap.get(holding.broker_id) ?? holding.broker_id}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      className="w-24 h-8"
+                      defaultValue={holding.shares}
+                      onBlur={(e) =>
+                        handleSharesUpdate(holding, Number(e.target.value))
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {formatRelativeDate(holding.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget(holding)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete holding"
+        description="Are you sure you want to delete this holding? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

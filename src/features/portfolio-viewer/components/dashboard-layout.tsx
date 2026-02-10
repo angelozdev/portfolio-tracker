@@ -6,16 +6,20 @@ import { LocalStorageCache } from "@/shared/utils/local-storage-cache";
 import { calculatePortfolio } from "../logic/portfolio-calculator";
 import { calculateBrokerSummary } from "../logic/broker-calculator";
 import SummaryCards from "./summary-cards";
-import AllocationChart from "./allocation-chart";
 import RebalanceTable from "./rebalance-table";
 import BrokerBalanceCard from "./broker-balance-card";
 import Card from "@/shared/ui/card";
 import type { Asset, Holding, Broker } from "@/types";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+
+const AllocationChart = lazy(() => import("./allocation-chart"));
 import Button from "@/shared/ui/button";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const priceCache = new LocalStorageCache<Record<string, number>>(
   "portfolio-prices",
+  5 * 60 * 1000, // 5 minutes TTL
 );
 
 export default function Dashboard() {
@@ -25,10 +29,13 @@ export default function Dashboard() {
   const { data, refetch } = useSuspenseQuery({
     queryKey: QUERY_KEYS.PORTFOLIO,
     queryFn: async () => {
-      // Fetch Assets, Holdings, and Brokers
-      const { data: assets } = await supabase.from("assets").select("*");
-      const { data: holdings } = await supabase.from("holdings").select("*");
-      const { data: brokers } = await supabase.from("brokers").select("*");
+      // Fetch Assets, Holdings, and Brokers in parallel
+      const [{ data: assets }, { data: holdings }, { data: brokers }] =
+        await Promise.all([
+          supabase.from("assets").select("*"),
+          supabase.from("holdings").select("*"),
+          supabase.from("brokers").select("*"),
+        ]);
 
       if (!assets || !holdings || !brokers)
         throw new Error("Failed to fetch portfolio data");
@@ -36,12 +43,10 @@ export default function Dashboard() {
       // Fetch Prices (cached in localStorage)
       const symbols = assets.map((a: Asset) => a.symbol);
       const cached = priceCache.get();
-      const prices =
-        cached && symbols.every((s) => s in cached)
-          ? cached
-          : await fetchCurrentPrices(symbols);
+      const isCacheValid = cached && symbols.every((s) => s in cached);
+      const prices = isCacheValid ? cached : await fetchCurrentPrices(symbols);
 
-      if (!cached) priceCache.set(prices);
+      if (!isCacheValid) priceCache.set(prices);
 
       // Calculate Portfolio and Broker Summaries
       const portfolio = calculatePortfolio(
@@ -67,10 +72,14 @@ export default function Dashboard() {
     setIsGeneratingSeed(true);
     try {
       const { error } = await supabase.rpc("generate_seed_data");
-      if (error) console.error(error);
-      else refetch();
-    } catch (e) {
-      console.error(e);
+      if (error) {
+        toast.error("Failed to generate demo data");
+      } else {
+        toast.success("Demo data generated!");
+        refetch();
+      }
+    } catch {
+      toast.error("Failed to generate demo data");
     } finally {
       setIsGeneratingSeed(false);
     }
@@ -82,7 +91,14 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">Welcome to Portfolio Tracker</h1>
         <p className="text-muted-foreground">You don't have any assets yet.</p>
         <Button onClick={handleSeedData} disabled={isGeneratingSeed}>
-          {isGeneratingSeed ? "Generating..." : "Generate Demo Data"}
+          {isGeneratingSeed ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Generating...
+            </>
+          ) : (
+            "Generate Demo Data"
+          )}
         </Button>
       </div>
     );
@@ -108,7 +124,13 @@ export default function Dashboard() {
             <Card.Description>Current distribution by asset</Card.Description>
           </Card.Header>
           <Card.Content>
-            <AllocationChart assets={portfolio.assets} />
+            <Suspense
+              fallback={
+                <div className="h-[300px] w-full animate-pulse rounded-md bg-muted" />
+              }
+            >
+              <AllocationChart assets={portfolio.assets} />
+            </Suspense>
           </Card.Content>
         </Card>
 
