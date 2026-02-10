@@ -2,6 +2,7 @@ import { QUERY_KEYS } from "@/shared/constants/query-keys";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { supabase } from "@/shared/infra/supabase-client";
 import { fetchCurrentPrices } from "@/features/market-data/services/price-service";
+import { LocalStorageCache } from "@/shared/utils/local-storage-cache";
 import { calculatePortfolio } from "../logic/portfolio-calculator";
 import { calculateBrokerSummary } from "../logic/broker-calculator";
 import SummaryCards from "./summary-cards";
@@ -12,6 +13,10 @@ import Card from "@/shared/ui/card";
 import type { Asset, Holding, Broker } from "@/types";
 import { useState } from "react";
 import Button from "@/shared/ui/button";
+
+const priceCache = new LocalStorageCache<Record<string, number>>(
+  "portfolio-prices",
+);
 
 export default function Dashboard() {
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
@@ -28,22 +33,28 @@ export default function Dashboard() {
       if (!assets || !holdings || !brokers)
         throw new Error("Failed to fetch portfolio data");
 
-      // Fetch Prices
+      // Fetch Prices (cached in localStorage)
       const symbols = assets.map((a: Asset) => a.symbol);
-      const prices = await fetchCurrentPrices(symbols);
+      const cached = priceCache.get();
+      const prices =
+        cached && symbols.every((s) => s in cached)
+          ? cached
+          : await fetchCurrentPrices(symbols);
+
+      if (!cached) priceCache.set(prices);
 
       // Calculate Portfolio and Broker Summaries
       const portfolio = calculatePortfolio(
         assets as Asset[],
         holdings as Holding[],
-        prices
+        prices,
       );
 
       const brokerSummary = calculateBrokerSummary(
         holdings as Holding[],
         brokers as Broker[],
         prices,
-        assets as Asset[]
+        assets as Asset[],
       );
 
       return { portfolio, brokerSummary };

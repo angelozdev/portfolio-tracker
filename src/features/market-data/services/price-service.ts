@@ -1,7 +1,7 @@
 import { supabase } from "@/shared/infra/supabase-client";
 
 export async function fetchCurrentPrices(
-  symbols: string[]
+  symbols: string[],
 ): Promise<Record<string, number>> {
   if (symbols.length === 0) return {};
 
@@ -12,7 +12,7 @@ export async function fetchCurrentPrices(
   if (error) {
     console.error("Failed to fetch prices from Edge Function:", error);
     throw new Error(
-      "Unable to fetch current prices. Please check your internet connection and try again."
+      "Unable to fetch current prices. Please check your internet connection and try again.",
     );
   }
 
