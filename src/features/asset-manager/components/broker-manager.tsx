@@ -95,8 +95,8 @@ export default function BrokerManager({ brokers }: BrokerManagerProps) {
               <Button type="submit" disabled={createBroker.isPending}>
                 {createBroker.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Adding...
+                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+                    Adding…
                   </>
                 ) : (
                   "Add Broker"
@@ -109,7 +109,7 @@ export default function BrokerManager({ brokers }: BrokerManagerProps) {
 
       {brokers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Building2 className="h-10 w-10 text-muted-foreground mb-3" />
+          <Building2 aria-hidden="true" className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm font-medium">No brokers yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add your first broker to start tracking holdings.
@@ -136,17 +136,18 @@ export default function BrokerManager({ brokers }: BrokerManagerProps) {
                   {broker.icon ? (
                     <span className="text-xl">{broker.icon}</span>
                   ) : (
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <Building2 aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
                   )}
                   <span className="font-medium">{broker.name}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label={`Delete ${broker.name}`}
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => setDeleteTarget(broker)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
                 </Button>
               </Card.Content>
             </Card>

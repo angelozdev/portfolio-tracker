@@ -93,8 +93,8 @@ export default function Dashboard() {
         <Button onClick={handleSeedData} disabled={isGeneratingSeed}>
           {isGeneratingSeed ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Generating...
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+              Generating…
             </>
           ) : (
             "Generate Demo Data"
@@ -109,7 +109,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="text-sm text-muted-foreground">
-          Last updated: {new Date().toLocaleTimeString()}
+          Last updated: {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "numeric", second: "numeric" }).format(new Date())}
         </div>
       </div>
 
@@ -156,7 +156,7 @@ export default function Dashboard() {
                 )}
                 <br />
                 <p className="italic">
-                  "Time in the market beats timing the market."
+                  {"\u201CTime in the market beats timing the market.\u201D"}
                 </p>
               </div>
             </Card.Content>

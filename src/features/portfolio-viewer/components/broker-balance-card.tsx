@@ -18,7 +18,7 @@ export default function BrokerBalanceCard({ summary }: BrokerBalanceCardProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
+          <Building2 aria-hidden="true" className="h-5 w-5" />
           Balance by Broker
         </CardTitle>
         <CardDescription>
@@ -34,7 +34,7 @@ export default function BrokerBalanceCard({ summary }: BrokerBalanceCardProps) {
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <Building2 aria-hidden="true" className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="text-sm">No brokers configured yet.</p>
             <p className="text-xs mt-1">Add brokers in Portfolio Manager.</p>
           </div>

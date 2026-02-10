@@ -15,7 +15,7 @@ export default function BrokerBalanceItem({ broker }: BrokerBalanceItemProps) {
           {broker.brokerIcon ? (
             <span className="text-lg">{broker.brokerIcon}</span>
           ) : (
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
           )}
           <span className="font-medium">{broker.brokerName}</span>
           <span className="text-sm text-muted-foreground">
@@ -25,11 +25,11 @@ export default function BrokerBalanceItem({ broker }: BrokerBalanceItemProps) {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xl font-bold">
+          <span className="text-xl font-bold tabular-nums">
             {formatCurrency(broker.totalValue)}
           </span>
-          <span className="text-sm text-muted-foreground min-w-[3rem] text-right">
-            {broker.percentage.toFixed(1)}%
+          <span className="text-sm text-muted-foreground min-w-[3rem] text-right tabular-nums">
+            {new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(broker.percentage)}%
           </span>
         </div>
       </div>

@@ -156,9 +156,9 @@ export default function AssetManager({ assets }: AssetManagerProps) {
               )}
             >
               {isValid ? (
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
               ) : (
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle aria-hidden="true" className="h-4 w-4" />
               )}
               Total Allocation: {totalAllocation.toFixed(2)}%
             </div>
@@ -241,8 +241,8 @@ export default function AssetManager({ assets }: AssetManagerProps) {
               <Button type="submit" disabled={createAsset.isPending}>
                 {createAsset.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Adding...
+                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+                    Adding…
                   </>
                 ) : (
                   "Add Asset"
@@ -255,7 +255,7 @@ export default function AssetManager({ assets }: AssetManagerProps) {
 
       {localAssets.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <PackageOpen className="h-10 w-10 text-muted-foreground mb-3" />
+          <PackageOpen aria-hidden="true" className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm font-medium">No assets yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add your first asset to define target allocations.
@@ -292,6 +292,7 @@ export default function AssetManager({ assets }: AssetManagerProps) {
                     <Input
                       type="number"
                       step="0.01"
+                      aria-label={`Target percentage for ${asset.symbol}`}
                       className={cn(
                         "w-24 h-8 transition-colors",
                         !isValid &&
@@ -307,10 +308,11 @@ export default function AssetManager({ assets }: AssetManagerProps) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Delete ${asset.symbol}`}
                       className="h-8 w-8 text-destructive hover:bg-destructive/10"
                       onClick={() => setDeleteTarget(asset)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -338,8 +340,8 @@ export default function AssetManager({ assets }: AssetManagerProps) {
           >
             {updateAsset.isPending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Saving...
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+                Saving…
               </>
             ) : (
               "Save Allocations"

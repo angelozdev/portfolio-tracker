@@ -12,7 +12,7 @@ function App() {
   const { session, loading } = useSession();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-screen items-center justify-center">Loading…</div>;
   }
 
   if (!session) {
@@ -23,7 +23,7 @@ function App() {
     <AppProviders>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <main>
+        <main id="main-content">
           <ErrorBoundary FallbackComponent={GlobalErrorBoundary}>
             <Suspense fallback={<DashboardSkeleton />}>
               <Dashboard />

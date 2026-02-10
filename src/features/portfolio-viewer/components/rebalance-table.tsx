@@ -46,7 +46,7 @@ export default function RebalanceTable({ assets }: RebalanceTableProps) {
                       / {formatPercentage(asset.targetAllocation)}
                     </span>
                   </div>
-                  <Progress value={(asset.currentAllocation / asset.targetAllocation) * 100} className="h-2" />
+                  <Progress value={asset.targetAllocation > 0 ? (asset.currentAllocation / asset.targetAllocation) * 100 : 0} className="h-2" />
                 </div>
               </TableCell>
               <TableCell>

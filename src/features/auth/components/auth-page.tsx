@@ -3,6 +3,7 @@ import { supabase } from "@/shared/infra/supabase-client";
 import Button from "@/shared/ui/button";
 import Card from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,18 +59,27 @@ export default function AuthPage() {
         <Card.Content>
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="auth-email">Email</Label>
               <Input
+                id="auth-email"
                 type="email"
-                placeholder="Email"
+                name="email"
+                placeholder="you@example.com…"
+                autoComplete="email"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="auth-password">Password</Label>
               <Input
+                id="auth-password"
                 type="password"
-                placeholder="Password"
+                name="password"
+                placeholder="Your password…"
+                autoComplete={authView === "signin" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -78,7 +88,7 @@ export default function AuthPage() {
 
             {error && (
               <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -86,8 +96,8 @@ export default function AuthPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
+                  <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+                  Loading…
                 </>
               ) : authView === "signin" ? (
                 "Sign In"
@@ -102,7 +112,7 @@ export default function AuthPage() {
                 onClick={() =>
                   setAuthView(authView === "signin" ? "signup" : "signin")
                 }
-                className="underline text-muted-foreground hover:text-primary transition-colors"
+                className="underline text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
               >
                 {authView === "signin"
                   ? "Don't have an account? Sign up"

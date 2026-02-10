@@ -189,8 +189,8 @@ export default function HoldingManager({
               <Button type="submit" disabled={createHolding.isPending}>
                 {createHolding.isPending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Adding...
+                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+                    Adding…
                   </>
                 ) : (
                   "Add Holding"
@@ -203,7 +203,7 @@ export default function HoldingManager({
 
       {sortedHoldings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Wallet className="h-10 w-10 text-muted-foreground mb-3" />
+          <Wallet aria-hidden="true" className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm font-medium">No holdings yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add a holding to track your shares across brokers.
@@ -242,6 +242,7 @@ export default function HoldingManager({
                   <TableCell>
                     <Input
                       type="number"
+                      aria-label={`Shares for ${assetMap.get(holding.asset_id) ?? "asset"}`}
                       className="w-24 h-8"
                       defaultValue={holding.shares}
                       onBlur={(e) =>
@@ -256,10 +257,11 @@ export default function HoldingManager({
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Delete holding for ${assetMap.get(holding.asset_id) ?? "asset"}`}
                       className="h-8 w-8 text-destructive hover:bg-destructive/10"
                       onClick={() => setDeleteTarget(holding)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

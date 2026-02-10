@@ -15,7 +15,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
           <Card.Title className="text-sm font-medium">
             Total Portfolio Value
           </Card.Title>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <DollarSign aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Card.Header>
         <Card.Content>
           <div className="text-2xl font-bold">
@@ -32,7 +32,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
           <Card.Title className="text-sm font-medium">
             Performance Tracking
           </Card.Title>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <TrendingUp aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Card.Header>
         <Card.Content>
           <p className="text-sm text-muted-foreground mb-2">
@@ -49,7 +49,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
           <Card.Title className="text-sm font-medium">
             Buying Power Needed
           </Card.Title>
-          <Target className="h-4 w-4 text-muted-foreground" />
+          <Target aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Card.Header>
         <Card.Content>
           <div className="text-2xl font-bold">

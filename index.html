@@ -1,12 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="color-scheme: light dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>porfolio-tracker</title>
+    <meta name="theme-color" content="hsl(0 0% 100%)" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="hsl(222.2 84% 4.9%)" media="(prefers-color-scheme: dark)" />
+    <title>Portfolio Tracker</title>
   </head>
   <body>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground">Skip to main content</a>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
