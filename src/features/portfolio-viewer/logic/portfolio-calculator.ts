@@ -3,12 +3,17 @@ import type {
   Holding,
   PortfolioSummary,
   AssetPerformance,
+  RebalanceMode,
 } from "@/types";
+
+export const DEFAULT_OVERWEIGHT_THRESHOLD = 2;
 
 export function calculatePortfolio(
   assets: Asset[],
   holdings: Holding[],
-  prices: Record<string, number>
+  prices: Record<string, number>,
+  mode: RebalanceMode = "buy-and-sell",
+  threshold: number = DEFAULT_OVERWEIGHT_THRESHOLD,
 ): PortfolioSummary {
   // 1. Aggregate holdings by Asset (handle multi-broker cases)
   const assetHoldings = new Map<string, number>(); // assetId -> totalShares
@@ -42,20 +47,50 @@ export function calculatePortfolio(
     });
   });
 
-  // 3. Calculate Deltas and Actions
+  // 2.5 Identify overweight assets (only relevant in buy-and-sell mode)
+  const overweightAssetIds = new Set<string>();
+  if (mode === "buy-and-sell") {
+    assetCalculations.forEach((item) => {
+      const currentAllocation =
+        totalValue > 0 ? (item.value / totalValue) * 100 : 0;
+      if (currentAllocation > item.asset.target_percentage + threshold) {
+        overweightAssetIds.add(item.asset.id);
+      }
+    });
+  }
+
+  // 3. Buy-only rebalance: find the new total T so no asset needs selling
+  // T_i = currentValue_i * 100 / target_i; T = max(T_i)
+  let buyOnlyTotal = totalValue;
+  assetCalculations.forEach((item) => {
+    if (
+      item.asset.target_percentage > 0 &&
+      !overweightAssetIds.has(item.asset.id)
+    ) {
+      const requiredTotal = (item.value * 100) / item.asset.target_percentage;
+      if (requiredTotal > buyOnlyTotal) buyOnlyTotal = requiredTotal;
+    }
+  });
+
+  const totalToInvest = buyOnlyTotal - totalValue;
+
+  // 4. Calculate Deltas and Actions (buy-only)
   const performance: AssetPerformance[] = assetCalculations.map((item) => {
     const currentAllocation =
       totalValue > 0 ? (item.value / totalValue) * 100 : 0;
-    const targetValue = (totalValue * item.asset.target_percentage) / 100;
+    const isOverweight = overweightAssetIds.has(item.asset.id);
+
+    const targetValue = isOverweight
+      ? (totalValue * item.asset.target_percentage) / 100
+      : (buyOnlyTotal * item.asset.target_percentage) / 100;
     const deltaValue = targetValue - item.value;
     const deltaShares = item.price > 0 ? deltaValue / item.price : 0;
 
-    // Threshold for action (e.g. if deviation is < 5% of the target, maybe hold?)
-    // For now, simple logic:
-    let action: "buy" | "sell" | "hold" = "hold";
-    if (deltaValue > item.price)
-      action = "buy"; // If we need to buy at least 1 share
-    else if (deltaValue < -item.price) action = "sell"; // If we need to sell at least 1 share
+    const action: "buy" | "sell" | "hold" = isOverweight
+      ? "sell"
+      : deltaValue > item.price
+        ? "buy"
+        : "hold";
 
     return {
       assetId: item.asset.id,
@@ -77,6 +112,7 @@ export function calculatePortfolio(
 
   return {
     totalValue,
+    totalToInvest,
     assets: performance,
   };
 }

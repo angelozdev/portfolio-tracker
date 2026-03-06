@@ -45,8 +45,11 @@ export interface AssetPerformance {
   action: 'buy' | 'sell' | 'hold';
 }
 
+export type RebalanceMode = "buy-only" | "buy-and-sell";
+
 export interface PortfolioSummary {
   totalValue: number;
+  totalToInvest: number;
   assets: AssetPerformance[];
 }
 

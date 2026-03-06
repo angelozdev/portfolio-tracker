@@ -3,16 +3,22 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { supabase } from "@/shared/infra/supabase-client";
 import { fetchCurrentPrices } from "@/features/market-data/services/price-service";
 import { LocalStorageCache } from "@/shared/utils/local-storage-cache";
-import { calculatePortfolio } from "../logic/portfolio-calculator";
+import {
+  calculatePortfolio,
+  DEFAULT_OVERWEIGHT_THRESHOLD,
+} from "../logic/portfolio-calculator";
 import { calculateBrokerSummary } from "../logic/broker-calculator";
 import SummaryCards from "./summary-cards";
 import RebalanceTable from "./rebalance-table";
 import BrokerBalanceCard from "./broker-balance-card";
 import Card from "@/shared/ui/card";
-import type { Asset, Holding, Broker } from "@/types";
-import { lazy, Suspense, useState } from "react";
+import type { Asset, Holding, Broker, RebalanceMode } from "@/types";
+import { lazy, Suspense, useMemo, useState } from "react";
 
 const AllocationChart = lazy(() => import("./allocation-chart"));
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import Button from "@/shared/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +30,9 @@ const priceCache = new LocalStorageCache<Record<string, number>>(
 
 export default function Dashboard() {
   const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+  const [rebalanceMode, setRebalanceMode] =
+    useState<RebalanceMode>("buy-and-sell");
+  const [threshold, setThreshold] = useState(DEFAULT_OVERWEIGHT_THRESHOLD);
 
   // 1. Fetch Data
   const { data, refetch } = useSuspenseQuery({
@@ -48,13 +57,6 @@ export default function Dashboard() {
 
       if (!isCacheValid) priceCache.set(prices);
 
-      // Calculate Portfolio and Broker Summaries
-      const portfolio = calculatePortfolio(
-        assets as Asset[],
-        holdings as Holding[],
-        prices,
-      );
-
       const brokerSummary = calculateBrokerSummary(
         holdings as Holding[],
         brokers as Broker[],
@@ -62,11 +64,28 @@ export default function Dashboard() {
         assets as Asset[],
       );
 
-      return { portfolio, brokerSummary };
+      return {
+        assets: assets as Asset[],
+        holdings: holdings as Holding[],
+        prices,
+        brokerSummary,
+      };
     },
   });
 
-  const { portfolio, brokerSummary } = data;
+  const { brokerSummary } = data;
+
+  const portfolio = useMemo(
+    () =>
+      calculatePortfolio(
+        data.assets,
+        data.holdings,
+        data.prices,
+        rebalanceMode,
+        threshold,
+      ),
+    [data.assets, data.holdings, data.prices, rebalanceMode, threshold],
+  );
 
   const handleSeedData = async () => {
     setIsGeneratingSeed(true);
@@ -93,7 +112,10 @@ export default function Dashboard() {
         <Button onClick={handleSeedData} disabled={isGeneratingSeed}>
           {isGeneratingSeed ? (
             <>
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin mr-2" />
+              <Loader2
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin mr-2"
+              />
               Generating…
             </>
           ) : (
@@ -109,7 +131,12 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="text-sm text-muted-foreground">
-          Last updated: {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "numeric", second: "numeric" }).format(new Date())}
+          Last updated:{" "}
+          {new Intl.DateTimeFormat(undefined, {
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+          }).format(new Date())}
         </div>
       </div>
 
@@ -166,13 +193,55 @@ export default function Dashboard() {
 
       <Card>
         <Card.Header>
-          <Card.Title>Rebalance Actions</Card.Title>
-          <Card.Description>
-            Buy/Sell recommendations to align with your target allocation.
-          </Card.Description>
+          <div className="flex items-center justify-between">
+            <div>
+              <Card.Title>Rebalance Actions</Card.Title>
+              <Card.Description>
+                {rebalanceMode === "buy-only"
+                  ? "Buy-only recommendations — no selling required."
+                  : "Buy & sell recommendations to align with your target allocation."}
+              </Card.Description>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="threshold"
+                  className="text-xs whitespace-nowrap"
+                >
+                  Threshold
+                </Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={0.5}
+                  value={threshold}
+                  onChange={(e) =>
+                    setThreshold(Math.max(0, Number(e.target.value)))
+                  }
+                  className="w-16 h-8 text-xs tabular-nums"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
+              </div>
+              <Tabs
+                value={rebalanceMode}
+                onValueChange={(v) => setRebalanceMode(v as RebalanceMode)}
+              >
+                <TabsList>
+                  <TabsTrigger value="buy-only">Buy Only</TabsTrigger>
+                  <TabsTrigger value="buy-and-sell">Buy & Sell</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
         </Card.Header>
         <Card.Content>
-          <RebalanceTable assets={portfolio.assets} />
+          <RebalanceTable
+            assets={portfolio.assets}
+            totalToInvest={portfolio.totalToInvest}
+            threshold={threshold}
+          />
         </Card.Content>
       </Card>
     </div>
