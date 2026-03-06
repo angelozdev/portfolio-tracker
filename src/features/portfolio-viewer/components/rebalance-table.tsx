@@ -8,8 +8,11 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import Badge from "@/shared/ui/badge";
+import Button from "@/shared/ui/button";
 import { Progress } from "@/shared/ui/progress";
 import { formatCurrency, formatPercentage } from "@/shared/utils/format";
+import { Copy, Check } from "lucide-react";
+import { useState } from "react";
 
 interface RebalanceTableProps {
   assets: AssetPerformance[];
@@ -17,20 +20,85 @@ interface RebalanceTableProps {
   threshold: number;
 }
 
+function buildCopyCsv(
+  assets: AssetPerformance[],
+  totalToInvest: number,
+  threshold: number,
+) {
+  const lines: string[] = [];
+  lines.push(
+    "Symbol,Name,Price,Value,Allocation,Target,Status,Action,Shares,Diff",
+  );
+  for (const a of assets) {
+    const status =
+      a.currentAllocation > a.targetAllocation + threshold
+        ? "Overweight"
+        : a.currentAllocation < a.targetAllocation - threshold
+          ? "Underweight"
+          : "Balanced";
+    const action =
+      a.action === "buy" ? "Buy" : a.action === "sell" ? "Sell" : "Hold";
+    const shares =
+      a.action === "hold" ? "" : Math.abs(a.deltaShares).toFixed(2);
+    lines.push(
+      [
+        a.symbol,
+        `"${a.name}"`,
+        a.currentPrice.toFixed(2),
+        a.currentValue.toFixed(2),
+        a.currentAllocation.toFixed(2) + "%",
+        a.targetAllocation.toFixed(2) + "%",
+        status,
+        action,
+        shares,
+        a.deltaValue.toFixed(2),
+      ].join(","),
+    );
+  }
+  lines.push("");
+  lines.push(`Total to invest,${totalToInvest.toFixed(2)}`);
+  return lines.join("\n");
+}
+
 export default function RebalanceTable({
   assets,
   totalToInvest,
   threshold,
 }: RebalanceTableProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(
+      buildCopyCsv(assets, totalToInvest, threshold),
+    );
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border bg-muted/50 p-4 flex items-center justify-between">
         <span className="text-sm font-medium">
           Total to invest for rebalance
         </span>
-        <span className="text-lg font-bold">
-          {formatCurrency(totalToInvest)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-bold">
+            {formatCurrency(totalToInvest)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            className="h-8 w-8 p-0"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            <span className="sr-only">Copy table</span>
+          </Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
